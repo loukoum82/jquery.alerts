@@ -1,16 +1,33 @@
 // jQuery Alert Dialogs Plugin
 //
-// Version 1.0
+// Version 1.1
 //
 // Cory S.N. LaViska
 // A Beautiful Site (http://abeautifulsite.net/)
-// 29 December 2008
+// 14 May 2009
 //
-// This is an altered version form Aurélien Malisart <aurelien.malisart@gmail.com>
-//
-// Visit http://github.com/aurels/jquery.alerts
 // Visit http://abeautifulsite.net/notebook/87 for more information
 //
+// Usage:
+//		jAlert( message, [title, callback] )
+//		jConfirm( message, [title, callback] )
+//		jPrompt( message, [value, title, callback] )
+//		jQuestion(message, [title, callback])		
+// 
+// History:
+//
+//		1.00 - Released (29 December 2008)
+//
+//		1.01 - Fixed bug where unbinding would destroy all resize events
+//
+// License:
+// 
+// This plugin is dual-licensed under the GNU General Public License and the MIT License and
+// is copyright 2008 A Beautiful Site, LLC. 
+//
+
+// 2015.01.15 Added by loukoum82 : Question, anyQUestion, promptBig (textarea prompt)
+
 (function($) {
 	
 	$.alerts = {
@@ -23,39 +40,60 @@
 		overlayOpacity: .01,                // transparency level of overlay
 		overlayColor: '#FFF',               // base color of overlay
 		draggable: true,                    // make the dialogs draggable (requires UI Draggables plugin)
-		okButton: '&nbsp;OK&nbsp;',         // text for the OK button (not used anymore in this version)
-		cancelButton: '&nbsp;Cancel&nbsp;', // text for the Cancel button (not used anymore in this version)
+		okButton: '&nbsp;OK&nbsp;',         // text for the OK button
+		cancelButton: '&nbsp;Annuler&nbsp;', // text for the Cancel button
 		dialogClass: null,                  // if specified, this class will be applied to all dialogs
 		
 		// Public methods
 		
-		alert: function(message, ok, callback) {
-			$.alerts._show(message, null, ok, null, 'alert', function(result) {
+		alert: function(message, title, callback) {
+			if( title == null ) title = 'Information';
+			$.alerts._show(title, message, null, 'alert', function(result) {
 				if( callback ) callback(result);
 			});
 		},
 		
-		confirm: function(message, ok, cancel, callback) {
-			$.alerts._show(message, null, ok, cancel, 'confirm', function(result) {
+		confirm: function(message, title, callback) {
+			if( title == null ) title = 'Confirmation';
+			$.alerts._show(title, message, null, 'confirm', function(result) {
 				if( callback ) callback(result);
 			});
 		},
-			
-		prompt: function(message, value, ok, cancel, callback) {
-			$.alerts._show(message, value, ok, cancel, 'prompt', function(result) {
+		question: function(message, title, callback) {
+			if( title == null ) title = 'Question';
+			$.alerts._show(title, message, null, 'question', function(result) {
+				if( callback ) callback(result);
+			});
+		},
+		anyquestion: function(message, title, callback,buttons) {
+			if( title == null ) title = 'Question';
+			$.alerts._show(title, message, null, 'anyquestion', function(result) {
+				if( callback ) callback(result);
+			},buttons);
+		},	
+		prompt: function(message, value, title, callback) {
+			if( title == null ) title = 'Complément';
+			$.alerts._show(title, message, value, 'prompt', function(result) {
+				if( callback ) callback(result);
+			});
+		},
+		promptBig: function(message, value, title, callback) {
+			if( title == null ) title = 'Complément';
+			$.alerts._show(title, message, value, 'promptBig', function(result) {
 				if( callback ) callback(result);
 			});
 		},
 		
 		// Private methods
 		
-		_show: function(msg, value, ok, cancel, type, callback) {
+		_show: function(title, msg, value, type, callback,buttons) {
 			
 			$.alerts._hide();
 			$.alerts._overlay('show');
 			
 			$("BODY").append(
 			  '<div id="popup_container">' +
+			    '<h1 id="popup_title"></h1>' +
 			    '<div id="popup_content">' +
 			      '<div id="popup_message"></div>' +
 				'</div>' +
@@ -72,8 +110,12 @@
 				padding: 0,
 				margin: 0
 			});
-
-			$("#popup_content").addClass(type);
+			
+			$("#popup_title").text(title);
+			if (title=="Alerte")
+			 $("#popup_content,#popup_container").addClass("important");
+			else
+			 $("#popup_content").addClass(type);
 			$("#popup_message").text(msg);
 			$("#popup_message").html( $("#popup_message").text().replace(/\n/g, '<br />') );
 			
@@ -87,7 +129,7 @@
 			
 			switch( type ) {
 				case 'alert':
-					$("#popup_message").after('<div id="popup_panel"><input type="button" value="' + ok + '" id="popup_ok" /></div>');
+					$("#popup_message").after('<div id="popup_panel"><input type="button" value="' + $.alerts.okButton + '" id="popup_ok" /></div>');
 					$("#popup_ok").click( function() {
 						$.alerts._hide();
 						callback(true);
@@ -97,7 +139,7 @@
 					});
 				break;
 				case 'confirm':
-					$("#popup_message").after('<div id="popup_panel"><input type="button" value="' + ok + '" id="popup_ok" /> <input type="button" value="' + cancel + '" id="popup_cancel" /></div>');
+					$("#popup_message").after('<div id="popup_panel"><input type="button" value="' + $.alerts.okButton + '" id="popup_ok" /> <input type="button" value="' + $.alerts.cancelButton + '" id="popup_cancel" /></div>');
 					$("#popup_ok").click( function() {
 						$.alerts._hide();
 						if( callback ) callback(true);
@@ -106,17 +148,50 @@
 						$.alerts._hide();
 						if( callback ) callback(false);
 					});
-					// $("#popup_ok").focus();
+					$("#popup_ok").focus();
 					$("#popup_ok, #popup_cancel").keypress( function(e) {
 						if( e.keyCode == 13 ) $("#popup_ok").trigger('click');
 						if( e.keyCode == 27 ) $("#popup_cancel").trigger('click');
 					});
 				break;
+				case 'question':
+					$("#popup_message").after('<div id="popup_panel"><input type="button" value="Oui" id="popup_ok" /> <input type="button" value="Non" id="popup_cancel" /></div>');
+					$("#popup_ok").click( function() {
+						$.alerts._hide();
+						if( callback ) callback(true);
+					});
+					$("#popup_cancel").click( function() {
+						$.alerts._hide();
+						if( callback ) callback(false);
+					});
+					$("#popup_ok").focus();
+					$("#popup_ok, #popup_cancel").keypress( function(e) {
+						if( e.keyCode == 13 ) $("#popup_ok").trigger('click');
+						if( e.keyCode == 27 ) $("#popup_cancel").trigger('click');
+					});
+				break;
+				case 'anyquestion':
+				    var btns = '';
+				    for (var i=0;i<buttons.length;i++)
+				     btns+= '<input type="button" value="'+buttons[i]+'" id="popup_btn'+i+'" idx="'+i+'" /> ';
+					$("#popup_message").after('<div id="popup_panel">'+btns+'</div>');
+					$("input[id^='popup_btn']").click( function() {
+						$.alerts._hide();
+						if( callback ) callback(parseInt($(this).attr("idx")));
+					});
+					$("#popup_btn0").focus();
+					
+				break;
 				case 'prompt':
-					$("#popup_message").append('<br /><input type="text" size="30" id="popup_prompt" />').after('<div id="popup_panel"><input type="button" value="' + ok + '" id="popup_ok" /> <input type="button" value="' + cancel + '" id="popup_cancel" /></div>');
+				case 'promptBig':
+				    if (type == 'prompt')
+					 $("#popup_message").append('<br /><input type="text" size="30" id="popup_prompt" />').after('<div id="popup_panel"><input type="button" value="' + $.alerts.okButton + '" id="popup_ok" /> <input type="button" value="' + $.alerts.cancelButton + '" id="popup_cancel" /></div>');
+					else
+					 $("#popup_message").append('<br /><textarea id="popup_prompt" ></textarea>').after('<div id="popup_panel"><input type="button" value="' + $.alerts.okButton + '" id="popup_ok" /> <input type="button" value="' + $.alerts.cancelButton + '" id="popup_cancel" /></div>');
 					$("#popup_prompt").width( $("#popup_message").width() );
 					$("#popup_ok").click( function() {
 						var val = $("#popup_prompt").val();
+						if (!val) {$("#popup_prompt").focus().select(); return;}
 						$.alerts._hide();
 						if( callback ) callback( val );
 					});
@@ -124,7 +199,7 @@
 						$.alerts._hide();
 						if( callback ) callback( null );
 					});
-					$("#popup_prompt, #popup_ok, #popup_cancel").keypress( function(e) {
+					$("input#popup_prompt, #popup_ok, #popup_cancel").keypress( function(e) {
 						if( e.keyCode == 13 ) $("#popup_ok").trigger('click');
 						if( e.keyCode == 27 ) $("#popup_cancel").trigger('click');
 					});
@@ -134,12 +209,12 @@
 			}
 			
 			// Make draggable
-			// if( $.alerts.draggable ) {
-			// 				try {
-			// 					//$("#popup_container").draggable({ handle: $("#popup_title") });
-			// 					//$("#popup_title").css({ cursor: 'move' });
-			// 				} catch(e) { /* requires jQuery UI draggables */ }
-			// 			}
+			if( $.alerts.draggable ) {
+				try {
+					$("#popup_container").draggable({ handle: $("#popup_title") });
+					$("#popup_title").css({ cursor: 'move' });
+				} catch(e) { /* requires jQuery UI draggables */ }
+			}
 		},
 		
 		_hide: function() {
@@ -190,12 +265,10 @@
 			if( $.alerts.repositionOnResize ) {
 				switch(status) {
 					case true:
-						$(window).bind('resize', function() {
-							$.alerts._reposition();
-						});
+						$(window).bind('resize', $.alerts._reposition);
 					break;
 					case false:
-						$(window).unbind('resize');
+						$(window).unbind('resize', $.alerts._reposition);
 					break;
 				}
 			}
@@ -204,16 +277,24 @@
 	}
 	
 	// Shortuct functions
-	jAlert = function(message, ok, callback) {
-		$.alerts.alert(message, ok, callback);
+	jAlert = function(message, title, callback) {
+		$.alerts.alert(message, title, callback);
 	}
-		
-	jConfirm = function(message, ok, cancel, callback) {
-		$.alerts.confirm(message, ok, cancel, callback);
-	};
-		
-	jPrompt = function(message, value, ok, cancel, callback) {
-		$.alerts.prompt(message, value, ok, cancel, callback);
-	};
 	
+	jConfirm = function(message, title, callback) {
+		$.alerts.confirm(message, title, callback);
+	};
+		
+	jPrompt = function(message, value, title, callback) {
+		$.alerts.prompt(message, value, title, callback);
+	};
+	jPromptBig = function(message, value, title, callback) {
+		$.alerts.promptBig(message, value, title, callback);
+	};
+	jQuestion = function(message, title, callback) {
+		$.alerts.question(message, title, callback);
+	};
+	jAnyQuestion = function(message, title, callback,buttons) {
+		$.alerts.anyquestion(message, title, callback,buttons);
+	};
 })(jQuery);
